@@ -1,0 +1,102 @@
+---
+title: "PML_PA"
+author: "AS"
+date: "Tuesday, October 21, 2014"
+output: html_document
+---
+
+```{r echo = FALSE}
+setwd("C:/Users/Dell/Desktop/Coursera/Practical Machine Learning")
+library(caret)
+library(randomForest)
+library(e1071)
+
+
+```
+
+# Load  Data Set
+```{r  echo = TRUE}
+orig_data_train <- read.csv("pml-training.csv");
+orig_data_test <-  read.csv("pml-testing.csv");
+```
+
+# Review the train data
+```{r results ='hold'}
+
+str(orig_data_train)
+
+```
+
+
+# remove irrelevant variables from both data sets
+
+```{r}
+irInd <- grep("X|timestamp|user_name|new_window", names(orig_data_train));
+orig_data_train <- orig_data_train[,-irInd];
+orig_data_test <- orig_data_test[,-irInd];
+
+```
+# We have to deal with NAs. we will assign zero to all NAs
+
+```{r }
+orig_data_train[is.na(orig_data_train)] <- 0
+orig_data_test[is.na(orig_data_test)] <- 0
+```
+# Now we will remove near zero variance from both data sets
+```{r}
+nrInd <- nearZeroVar(orig_data_train);
+orig_data_train <- orig_data_train[,-nrInd];
+orig_data_test <- orig_data_test[,-nrInd];
+```
+
+# Performing partitioning with caret package  
+Use 70% of data for training. Save rest of data for test.  
+```{r}
+set.seed(222);
+cdptrain <- createDataPartition(orig_data_train$classe, p=0.7, list = FALSE);
+new_data_train <- orig_data_train[cdptrain,];
+newvalid <- orig_data_train[-cdptrain,];
+
+
+library(randomForest)
+```
+
+
+# Fitting the Model with randomForest package to train data
+```{r}
+modelFit <- randomForest(classe ~., data=new_data_train, do.trace = 10)
+modelFit
+```
+
+# Fitting the model with randomForest package to test data for predicting
+
+```{r}
+modPred <- predict(modelFit,newvalid);
+confusionMatrix(modPred, newvalid$classe);
+```
+
+#Results
+
+#Now running the model on the test set (20 test cases).  These predictions are submitted as part of the assignment.
+
+```{r}
+predFinal <- predict(modelFit, orig_data_test);
+predFinal;
+
+```
+#The algorithm does correctly predicts the way in which the exercises were carried out.
+
+# These outputs are to be saved to files for submission.
+```{r}
+results <- as.vector(predFinal)
+
+pml_write_files = function(x) {
+  n = length(x)
+  for (i in 1:n) {
+    filename = paste0("problem_id_", i, ".txt")
+    write.table(x[i], file = filename, quote=FALSE, row.names = FALSE, col.names = FALSE)
+  }
+}
+pml_write_files(results)
+
+```
